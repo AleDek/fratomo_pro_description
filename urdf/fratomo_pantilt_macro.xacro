@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<robot name="fratomo_pantilt_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--All units in m-kg-s-radians unit system -->
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+  <xacro:property name="M_PI_2" value="1.570796327" />
+  <xacro:property name="DEG_TO_RAD" value="0.017453293" />
+  <!-- propertys for joint controllers-->
+  <xacro:property name="safety_controller_k_pos" value="100" />
+  <xacro:property name="safety_controller_k_vel" value="2" /> 
+  <xacro:property name="joint_damping" value="0.5" />
+  <xacro:property name="max_effort" value="300"/>
+  <xacro:property name="max_velocity" value="10"/>
+
+	<!--Material Definition-->  
+
+   <material name="gray">
+    <color rgba="0.5 0.5 0.5 0.5"/>
+  </material>
+
+  <material name="black">
+    <color rgba="0 0 0 0.5"/>
+  </material>
+
+  <material name="purple">
+    <color rgba="0.4 0.8 1 0.5"/>
+  </material>
+
+  <material name="white">
+    <color rgba="1 1 1 0.5"/>
+  </material>
+
+  <material name="blue">
+    <color rgba="0 0 0.8 0.5"/>
+  </material>
+
+
+  <!--Little helper macros to define the inertia matrix needed for links.-->
+  <!--Cuboid-->
+  <xacro:macro name="cuboid_inertia" params="width height length mass">
+    <inertia ixx="${mass * (height * height + length * length) / 12}"
+             iyy="${mass * (width * width + length * length) / 12}"
+             izz="${mass * (width * width + height * height) / 12}"
+             ixy="0" iyz="0" ixz="0"/>
+  </xacro:macro>
+
+  <!--Cylinder: length is along the z-axis! -->
+  <xacro:macro name="cylinder_inertia" params="radius length mass">
+    <inertia ixx="${mass * (3 * radius * radius + length * length) / 12}"
+             izz="${mass * radius* radius / 2}"
+             iyy="${mass * (3 * radius * radius + length * length) / 12}"
+             ixy="0" iyz="0" ixz="0"/>
+  </xacro:macro>
+  <!--Trasmission macro for gazebo and controllers -->
+  <xacro:macro name="transmission_block" params="joint_name">
+      <transmission name="${joint_name}_tran1">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="${joint_name}">
+          <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="${joint_name}_motor">
+          <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+          <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+      </transmission>
+     </xacro:macro>
+
+  <!-- WHOLE TORSO MACRO-->
+  <xacro:macro name="fratomo_pantilt" params="parent" > 
+   
+   <!-- links -->
+    <link name="turnable">
+      <visual>
+        <geometry>
+          <mesh filename="package://fratomo_pro_description/meshes/turnable.stl" scale="0.001 0.001 0.001 "/>
+        </geometry>
+        <material name="purple"/>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://fratomo_pro_description/meshes/turnable.stl" scale="0.001 0.001 0.001 "/>
+        </geometry>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+      </collision>
+      <inertial>
+        <xacro:cylinder_inertia radius="0.05" length="0.11" mass="1"/>
+        <mass value="1" />
+        <origin xyz="0 0 0.055" />
+      </inertial> 
+    </link>
+
+
+
+<!-- dummy camera, ee links -->
+    <link name="camera">
+      
+    </link>
+
+<!-- joints -->
+    <joint name="base_to_turnable" type="fixed">
+        <parent link="${parent}"/>
+        <child link="turnable"/>
+        <origin xyz="-0.052 0 0.169"/>
+    </joint>
+
+    <joint name="turnable_to_camera" type="fixed">
+        <parent link="turnable"/>
+        <child link="camera"/>
+        <origin rpy="0 0 0"  xyz="0.0 0.0 0.15"/>
+    </joint>
+
+
+    <!--xacro:transmission_block joint_name="turntable_to_camera"/-->
+
+    <!--gazebo>
+      <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+        <robotNamespace>/fratomo</robotNamespace>
+        <robotParam>fratomo_robot_description</robotParam>
+        <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+        <legacyModeNS>true</legacyModeNS>
+      </plugin>
+    </gazebo-->
+    
+    <gazebo reference="turnable">
+      <material>Gazebo/Blue</material>
+    </gazebo>
+    
+ 
+
+  </xacro:macro>
+</robot>
+

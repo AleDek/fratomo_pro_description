@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+
+<robot name="fratomo_torso" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find fratomo_pro_description)/urdf/fratomo_torso_macro.xacro" /> 
+
+<!-- robot torso  -->
+ <link name="world">
+ </link>
+
+ <joint name="glue2word" type="fixed">
+        <parent link="world"/>
+        <child link="base_link"/>
+        <origin xyz="0 0 0"/>
+    </joint>
+
+ <link name="base_link">
+ </link>
+
+<xacro:fratomo_torso parent="base_link"/>
+  
+
+</robot>

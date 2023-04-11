@@ -1,0 +1,174 @@
+<?xml version="1.0"?>
+
+<robot name="fratomo_base" xmlns:xacro="http://ros.org/wiki/xacro">
+<xacro:include filename="$(find fratomo_pro_description)/urdf/fratomo_base_macro.xacro" /> 
+<xacro:include filename="$(find fratomo_pro_description)/urdf/fratomo_pantilt_macro.xacro" /> 
+
+
+    <xacro:property name="LIDAR" value="True"/>
+    <xacro:property name="CAMERA" value="False"/>
+    <xacro:property name="DEPTH" value="True"/>
+  
+ 
+
+    <!-- Diff Drive Robot Base  -->
+    <xacro:fratomo_base />
+    <!-- Pan Tilt head  -->
+    <xacro:fratomo_pantilt parent="base_link"/>
+    
+    
+    <!-- Head CAMERA Sensor -->
+    <xacro:if value="${CAMERA}" > 
+        <!--Gazebo y-right/z-up camera frame is inconsistent with rviz/opencv x-right/y-down frame/-->
+        <joint name="camViewFix" type="fixed">
+            <parent link="camera"/>
+            <child link="camera_view"/>
+            <origin rpy="0 0 0"  xyz="0.0 0.0 0.0 "/>
+        </joint>
+        <link name="camera_view"/>
+        <gazebo reference="camera_view">
+            <sensor type="camera" name="camera1">
+                <update_rate>30.0</update_rate>
+                <camera name="head">
+                <horizontal_fov>1.3962634</horizontal_fov>
+                <image>
+                  <width>800</width>
+                  <height>800</height>
+                  <format>R8G8B8</format>
+                </image>
+                <clip>
+                  <near>0.02</near>
+                  <far>300</far>
+                </clip>
+                <noise>
+                  <type>gaussian</type>
+                  <mean>0.0</mean>
+                  <stddev>0.007</stddev>
+                </noise>
+                </camera>
+
+                <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+                <alwaysOn>true</alwaysOn>
+                <updateRate>0.0</updateRate>
+                <cameraName>/headCam</cameraName>
+                <imageTopicName>image_raw</imageTopicName>
+                <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+                <frameName>camera_view</frameName>
+                <hackBaseline>0.07</hackBaseline>
+                <distortionK1>0.0</distortionK1>
+                <distortionK2>0.0</distortionK2>
+                <distortionK3>0.0</distortionK3>
+                <distortionT1>0.0</distortionT1>
+                <distortionT2>0.0</distortionT2>
+                </plugin>
+            </sensor>
+        </gazebo>
+    </xacro:if>
+ 
+    <!-- LIDAR Sensor -->
+     <xacro:if value="${LIDAR}" > 
+
+        <!--publish laser frame on the base -->
+        <joint name="laser_joint" type="fixed">
+            <parent link="base_link"/>
+            <child link="laser_frame"/>
+            <origin rpy="0 ${M_PI} ${M_PI}"  xyz="0.075 0.0 0.265 "/>
+        </joint>
+        <link name="laser_frame"/>
+
+        <gazebo reference="laser_frame">
+            <sensor type="ray" name="head_hokuyo_sensor">
+                <pose>0 0 0 0 0 0</pose>
+                <visualize>false</visualize>
+                <update_rate>40</update_rate>
+                <ray>
+                    <scan>
+                      <horizontal>
+                        <samples>720</samples>
+                        <resolution>1</resolution>
+                        <min_angle>-${M_PI} </min_angle>
+                        <max_angle>${M_PI} </max_angle>
+                      </horizontal>
+                    </scan>
+                    <range>
+                      <min>0.8</min>
+                      <max>30.0</max>
+                      <resolution>0.01</resolution>
+                    </range>
+                    <noise>
+                      <type>gaussian</type>
+                      <!-- Noise parameters based on published spec for Hokuyo laser
+                           achieving "+-30mm" accuracy at range < 10m.  A mean of 0.0m and
+                           stddev of 0.01m will put 99.7% of samples within 0.03m of the true
+                           reading. -->
+                      <mean>0.0</mean>
+                      <stddev>0.01</stddev>
+                    </noise>
+                </ray>
+                <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_laser.so">
+                    <topicName>/laser/scan</topicName>
+                    <frameName>laser_frame</frameName>
+                </plugin>
+            </sensor>
+        </gazebo>
+    </xacro:if>
+ 
+ <!-- RGBD Sensor -->
+    <xacro:if value="${DEPTH}" > 
+
+        <!--publish rgbd frame on the base -->
+        <joint name="rgbd_joint" type="fixed">
+            <parent link="camera"/>
+            <child link="rgbd_frame"/>
+            <origin rpy="0 0 0"  xyz=" 0 0 0"/>
+        </joint>
+        <link name="rgbd_frame"/>
+        <!-- Fixing opitcal frame problem -->
+        <joint name="rgbd__optical_joint" type="fixed">
+            <parent link="rgbd_frame"/>
+            <child link="rgbd_optical_frame"/>
+            <origin rpy="-${M_PI_2} 0 -${M_PI_2} "  xyz=" 0 0 0"/>
+        </joint>
+        <link name="rgbd_optical_frame"/>
+
+        <gazebo reference="rgbd_frame">
+         <sensor type="depth" name="$depth_camera">
+            <always_on>true</always_on>
+            <update_rate>30.0</update_rate>
+            <camera>
+              <!--horizontal_fov>2</horizontal_fov-->
+              <horizontal_fov>1.3962634</horizontal_fov>
+              <image>
+                <!--format>L8</format-->
+                <format>BGR8</format>
+                <width>640</width>
+                <height>480</height>
+              </image>
+              <clip>
+                <near>0.01</near>
+                <far>100</far>
+              </clip>
+            </camera>
+            <plugin name="depth_camera_plugin" filename="libgazebo_ros_openni_kinect.so">
+              <alwaysOn>true</alwaysOn>
+              <baseline>0.11</baseline>
+              <updateRate>30.0</updateRate>
+              <cameraName>depth_camera</cameraName>
+              <imageTopicName>depth_camera/image_raw</imageTopicName>
+              <cameraInfoTopicName>depth_camera/camera_info</cameraInfoTopicName>
+              <depthImageTopicName>depth/disparity</depthImageTopicName>
+              <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+              <pointCloudTopicName>depth/points</pointCloudTopicName>
+              <frameName>rgbd_optical_frame</frameName>
+              <pointCloudCutoff>0.5</pointCloudCutoff>
+              <distortionK1>0.0</distortionK1>
+              <distortionK2>0.0</distortionK2>
+              <distortionK3>0.0</distortionK3>
+              <distortionT1>0.0</distortionT1>
+              <distortionT2>0.0</distortionT2>
+            </plugin>
+          </sensor>
+        </gazebo>
+    </xacro:if>
+  
+</robot>
